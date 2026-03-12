@@ -12,7 +12,62 @@ const PORT = process.env.PORT || 10000;
 app.get("/", (req, res) => {
   res.send("LeafletPro Backend Running");
 });
+app.post("/api/quote", (req, res) => {
+  const {
+    postcode = "",
+    quantity = 1000,
+    deliveryType = "shared",
+    trackedDistribution = false,
+    printIncluded = false,
+    designNeeded = false
+  } = req.body || {};
 
+  const qty = Number(quantity) || 1000;
+
+  let ratePerThousand = 55;
+
+  if (qty >= 5000) ratePerThousand = 42;
+  if (qty >= 10000) ratePerThousand = 36;
+  if (qty >= 20000) ratePerThousand = 32;
+
+  let distributionCost = (qty / 1000) * ratePerThousand;
+  let printCost = printIncluded ? (qty / 1000) * 18 : 0;
+  let trackingCost = trackedDistribution ? 25 : 0;
+  let designCost = designNeeded ? 65 : 0;
+  let setupCost = 15;
+  let priorityCost = deliveryType === "solus" ? 40 : 0;
+
+  const subtotal =
+    distributionCost +
+    printCost +
+    trackingCost +
+    designCost +
+    setupCost +
+    priorityCost;
+
+  const vatCost = subtotal * 0.2;
+  const totalCost = subtotal + vatCost;
+
+  res.json({
+    postcode,
+    zoneKey: postcode.slice(0, 2).toUpperCase() || "LD",
+    zoneName: "London Delivery Zone",
+    distributionCost,
+    printCost,
+    trackingCost,
+    designCost,
+    setupCost,
+    priorityCost,
+    subtotalCost: subtotal,
+    vatCost,
+    totalCost,
+    estimatedHomes: Math.round(qty * 0.92),
+    estimatedDays: deliveryType === "solus" ? "2-3 days" : "5-7 days",
+    ratePerThousand,
+    summaryZone: "London Delivery Zone",
+    summaryInsight: "Tracked distribution with live quote pricing"
+  });
+});
 app.post("/order", (req, res) => {
   const order = req.body;
 
