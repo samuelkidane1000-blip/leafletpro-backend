@@ -4,19 +4,11 @@ const fs = require("fs");
 require("dotenv").config();
 
 const Stripe = require("stripe");
-const nodemailer = require("nodemailer");
+const sgMail = require("@sendgrid/mail");
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
 
 const app = express();
 app.use(cors());
@@ -88,28 +80,24 @@ app.post("/order", (req, res) => {
   orders.push(order);
   fs.writeFileSync("orders.json", JSON.stringify(orders, null, 2));
 
-  transporter.sendMail(
-    {
-      from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_USER,
-      subject: "New LeafletPro Order",
-      text:
-        "New order received\n\n" +
-        "Postcode: " + (order.postcode || "") + "\n" +
-        "Quantity: " + (order.quantity || "") + "\n" +
-        "Total: £" + (order.totalCost || "0") + "\n" +
-        "Delivery: " + (order.deliveryType || "") + "\n" +
-        "Email: " + (order.email || "") + "\n" +
-        "Phone: " + (order.phone || "")
-    },
-    (error, info) => {
-      if (error) {
-        console.error("Email send error:", error);
-      } else {
-        console.log("Email sent:", info.response);
-      }
-    }
-  );
+  const msg = {
+    to: process.env.EMAIL_USER,
+    from: process.env.EMAIL_USER,
+    subject: "New LeafletPro Order",
+    text:
+      "New order received\n\n" +
+      "Postcode: " + (order.postcode || "") + "\n" +
+      "Quantity: " + (order.quantity || "") + "\n" +
+      "Total: £" + (order.totalCost || "0") + "\n" +
+      "Delivery: " + (order.deliveryType || "") + "\n" +
+      "Email: " + (order.email || "") + "\n" +
+      "Phone: " + (order.phone || "")
+  };
+
+  sgMail
+    .send(msg)
+    .then(() => console.log("Email sent"))
+    .catch(err => console.error("Email error", err));
 
   res.json({ success: true });
 });
@@ -125,7 +113,7 @@ app.get("/orders", (req, res) => {
 
 app.post("/create-checkout", async (req, res) => {
   try {
-    const { amount } = req.body;
+    const { amount } = req.body || {};
 
     if (!amount || amount < 50) {
       return res.status(400).json({ error: "Invalid amount" });
