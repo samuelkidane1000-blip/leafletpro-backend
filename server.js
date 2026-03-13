@@ -5,7 +5,13 @@ require("dotenv").config();
 
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -72,7 +78,19 @@ app.post("/order", (req, res) => {
   if (fs.existsSync("orders.json")) {
     orders = JSON.parse(fs.readFileSync("orders.json"));
   }
+  transporter.sendMail({
+  from: process.env.EMAIL_USER,
+  to: process.env.EMAIL_USER,
+  subject: "New LeafletPro Order",
+  text: `
+New order received
 
+Postcode: ${order.postcode}
+Quantity: ${order.quantity}
+Total: £${order.totalCost}
+Delivery: ${order.deliveryType}
+`
+});
   orders.push(order);
   fs.writeFileSync("orders.json", JSON.stringify(orders, null, 2));
 
