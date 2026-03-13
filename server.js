@@ -96,6 +96,10 @@ app.post("/create-checkout", async (req, res) => {
   try {
     const { amount } = req.body;
 
+    if (!amount || amount < 50) {
+      return res.status(400).json({ error: "Invalid amount" });
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -115,14 +119,12 @@ app.post("/create-checkout", async (req, res) => {
       cancel_url: "https://leafletpro-website-1.onrender.com/?cancel=true"
     });
 
-    res.json({ id: session.id });
-
+    return res.json({ id: session.id });
   } catch (error) {
-    console.error("Stripe error:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Stripe checkout error:", error);
+    return res.status(500).json({ error: error.message });
   }
 });
-  
 });
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
