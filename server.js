@@ -2,7 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 require("dotenv").config();
-
+const Stripe = require("stripe");
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -91,7 +92,38 @@ app.get("/orders", (req, res) => {
   const orders = JSON.parse(fs.readFileSync("orders.json"));
   res.json(orders);
 });
+app.post("/create-checkout", async (req, res) => {
+  try {
 
+    const { amount } = req.body;
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "gbp",
+            product_data: {
+              name: "Leaflet Distribution Campaign"
+            },
+            unit_amount: amount
+          },
+          quantity: 1
+        }
+      ],
+
+      success_url: "https://leafletpro-website-1.onrender.com/?success=true",
+      cancel_url: "https://leafletpro-website-1.onrender.com/?canceled=true"
+
+    });
+
+    res.json({ id: session.id });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
