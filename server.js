@@ -2,8 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const fs = require("fs");
 require("dotenv").config();
+
 const Stripe = require("stripe");
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -13,6 +15,7 @@ const PORT = process.env.PORT || 10000;
 app.get("/", (req, res) => {
   res.send("LeafletPro Backend Running");
 });
+
 app.post("/api/quote", (req, res) => {
   const {
     postcode = "",
@@ -26,7 +29,6 @@ app.post("/api/quote", (req, res) => {
   const qty = Number(quantity) || 1000;
 
   let ratePerThousand = 55;
-
   if (qty >= 5000) ratePerThousand = 42;
   if (qty >= 10000) ratePerThousand = 36;
   if (qty >= 20000) ratePerThousand = 32;
@@ -38,14 +40,7 @@ app.post("/api/quote", (req, res) => {
   let setupCost = 15;
   let priorityCost = deliveryType === "solus" ? 40 : 0;
 
-  const subtotal =
-    distributionCost +
-    printCost +
-    trackingCost +
-    designCost +
-    setupCost +
-    priorityCost;
-
+  const subtotal = distributionCost + printCost + trackingCost + designCost + setupCost + priorityCost;
   const vatCost = subtotal * 0.2;
   const totalCost = subtotal + vatCost;
 
@@ -69,6 +64,7 @@ app.post("/api/quote", (req, res) => {
     summaryInsight: "Tracked distribution with live quote pricing"
   });
 });
+
 app.post("/order", (req, res) => {
   const order = req.body;
 
@@ -78,7 +74,6 @@ app.post("/order", (req, res) => {
   }
 
   orders.push(order);
-
   fs.writeFileSync("orders.json", JSON.stringify(orders, null, 2));
 
   res.json({ success: true });
@@ -92,6 +87,7 @@ app.get("/orders", (req, res) => {
   const orders = JSON.parse(fs.readFileSync("orders.json"));
   res.json(orders);
 });
+
 app.post("/create-checkout", async (req, res) => {
   try {
     const { amount } = req.body;
@@ -125,7 +121,7 @@ app.post("/create-checkout", async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 });
-});
+
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
