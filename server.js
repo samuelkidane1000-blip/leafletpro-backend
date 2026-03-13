@@ -107,6 +107,7 @@ app.post("/order", (req, res) => {
 
   res.json({ success: true });
 });
+});
   orders.push(order);
   fs.writeFileSync("orders.json", JSON.stringify(orders, null, 2));
 
