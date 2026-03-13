@@ -94,7 +94,6 @@ app.get("/orders", (req, res) => {
 });
 app.post("/create-checkout", async (req, res) => {
   try {
-
     const { amount } = req.body;
 
     const session = await stripe.checkout.sessions.create({
@@ -105,24 +104,25 @@ app.post("/create-checkout", async (req, res) => {
           price_data: {
             currency: "gbp",
             product_data: {
-              name: "Leaflet Distribution Campaign"
+              name: "Leaflet Distribution Booking"
             },
             unit_amount: amount
           },
           quantity: 1
         }
       ],
-
       success_url: "https://leafletpro-website-1.onrender.com/?success=true",
-      cancel_url: "https://leafletpro-website-1.onrender.com/?canceled=true"
-
+      cancel_url: "https://leafletpro-website-1.onrender.com/?cancel=true"
     });
 
     res.json({ id: session.id });
 
   } catch (error) {
+    console.error("Stripe error:", error);
     res.status(500).json({ error: error.message });
   }
+});
+  
 });
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
