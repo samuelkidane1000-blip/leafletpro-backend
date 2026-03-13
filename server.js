@@ -4,9 +4,6 @@ const fs = require("fs");
 require("dotenv").config();
 
 const Stripe = require("stripe");
-const sgMail = require("@sendgrid/mail");
-
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -79,25 +76,6 @@ app.post("/order", (req, res) => {
 
   orders.push(order);
   fs.writeFileSync("orders.json", JSON.stringify(orders, null, 2));
-
-  const msg = {
-    to: process.env.EMAIL_USER,
-    from: process.env.EMAIL_USER,
-    subject: "New LeafletPro Order",
-    text:
-      "New order received\n\n" +
-      "Postcode: " + (order.postcode || "") + "\n" +
-      "Quantity: " + (order.quantity || "") + "\n" +
-      "Total: £" + (order.totalCost || "0") + "\n" +
-      "Delivery: " + (order.deliveryType || "") + "\n" +
-      "Email: " + (order.email || "") + "\n" +
-      "Phone: " + (order.phone || "")
-  };
-
-  sgMail
-    .send(msg)
-    .then(() => console.log("Email sent"))
-    .catch(err => console.error("Email error", err));
 
   res.json({ success: true });
 });
