@@ -78,18 +78,34 @@ app.post("/order", (req, res) => {
   if (fs.existsSync("orders.json")) {
     orders = JSON.parse(fs.readFileSync("orders.json"));
   }
-  transporter.sendMail({
-  from: process.env.EMAIL_USER,
-  to: process.env.EMAIL_USER,
-  subject: "New LeafletPro Order",
-  text: `
-New order received
 
-Postcode: ${order.postcode}
-Quantity: ${order.quantity}
-Total: £${order.totalCost}
-Delivery: ${order.deliveryType}
-`
+  orders.push(order);
+  fs.writeFileSync("orders.json", JSON.stringify(orders, null, 2));
+
+  transporter.sendMail(
+    {
+      from: process.env.EMAIL_USER,
+      to: process.env.EMAIL_USER,
+      subject: "New LeafletPro Order",
+      text:
+        "New order received\n\n" +
+        "Postcode: " + (order.postcode || "") + "\n" +
+        "Quantity: " + (order.quantity || "") + "\n" +
+        "Total: £" + (order.totalCost || "0") + "\n" +
+        "Delivery: " + (order.deliveryType || "") + "\n" +
+        "Email: " + (order.email || "") + "\n" +
+        "Phone: " + (order.phone || "")
+    },
+    (error, info) => {
+      if (error) {
+        console.error("Email send error:", error);
+      } else {
+        console.log("Email sent:", info.response);
+      }
+    }
+  );
+
+  res.json({ success: true });
 });
   orders.push(order);
   fs.writeFileSync("orders.json", JSON.stringify(orders, null, 2));
