@@ -4,7 +4,10 @@ const fs = require("fs");
 require("dotenv").config();
 
 const Stripe = require("stripe");
+const nodemailer = require("nodemailer");
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -12,6 +15,7 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   }
 });
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -39,12 +43,12 @@ app.post("/api/quote", (req, res) => {
   if (qty >= 10000) ratePerThousand = 36;
   if (qty >= 20000) ratePerThousand = 32;
 
-  let distributionCost = (qty / 1000) * ratePerThousand;
-  let printCost = printIncluded ? (qty / 1000) * 18 : 0;
-  let trackingCost = trackedDistribution ? 25 : 0;
-  let designCost = designNeeded ? 65 : 0;
-  let setupCost = 15;
-  let priorityCost = deliveryType === "solus" ? 40 : 0;
+  const distributionCost = (qty / 1000) * ratePerThousand;
+  const printCost = printIncluded ? (qty / 1000) * 18 : 0;
+  const trackingCost = trackedDistribution ? 25 : 0;
+  const designCost = designNeeded ? 65 : 0;
+  const setupCost = 15;
+  const priorityCost = deliveryType === "solus" ? 40 : 0;
 
   const subtotal = distributionCost + printCost + trackingCost + designCost + setupCost + priorityCost;
   const vatCost = subtotal * 0.2;
@@ -72,7 +76,7 @@ app.post("/api/quote", (req, res) => {
 });
 
 app.post("/order", (req, res) => {
-  const order = req.body;
+  const order = req.body || {};
 
   let orders = [];
   if (fs.existsSync("orders.json")) {
@@ -104,12 +108,6 @@ app.post("/order", (req, res) => {
       }
     }
   );
-
-  res.json({ success: true });
-});
-});
-  orders.push(order);
-  fs.writeFileSync("orders.json", JSON.stringify(orders, null, 2));
 
   res.json({ success: true });
 });
