@@ -70,6 +70,7 @@ app.post("/order", (req, res) => {
   const order = req.body || {};
 
   let orders = [];
+  let saasUsers = [];
   if (fs.existsSync("orders.json")) {
     orders = JSON.parse(fs.readFileSync("orders.json"));
   }
@@ -125,4 +126,41 @@ app.post("/create-checkout", async (req, res) => {
 
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
+});
+app.post("/signup", (req, res) => {
+
+  const {
+    firstName,
+    lastName,
+    company,
+    email,
+    phone,
+    businessType,
+    password
+  } = req.body;
+
+  const newUser = {
+    id: Date.now(),
+    firstName,
+    lastName,
+    company,
+    email,
+    phone,
+    businessType,
+    password,
+    plan: "starter",
+    createdAt: new Date()
+  };
+
+  saasUsers.push(newUser);
+
+  res.json({
+    success: true,
+    message: "Account created",
+    user: newUser
+  });
+
+});
+app.get("/users", (req, res) => {
+  res.json(saasUsers);
 });
