@@ -233,7 +233,30 @@ app.post("/create-checkout", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// SaaS login
+app.post("/login", (req, res) => {
 
+  const { email, password } = req.body;
+
+  const users = readJsonFile(USERS_FILE);
+
+  const user = users.find(
+    u => u.email === email && u.password === password
+  );
+
+  if (!user) {
+    return res.json({
+      success: false,
+      message: "Invalid email or password"
+    });
+  }
+
+  res.json({
+    success: true,
+    user
+  });
+
+});
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
