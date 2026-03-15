@@ -123,7 +123,39 @@ app.post("/create-checkout", async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 });
+// SaaS signup
+app.post("/signup", async (req, res) => {
+  try {
 
+    const { firstName, lastName, company, email, phone, businessType, password } = req.body;
+
+    const newUser = {
+      firstName,
+      lastName,
+      company,
+      email,
+      phone,
+      businessType,
+      password,
+      createdAt: new Date()
+    };
+
+    await db.collection("users").insertOne(newUser);
+
+    res.json({
+      success: true
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false });
+  }
+});
+// Get SaaS users
+app.get("/users", async (req, res) => {
+  const users = await db.collection("users").find().toArray();
+  res.json(users);
+});
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
