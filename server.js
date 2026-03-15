@@ -5,13 +5,44 @@ require("dotenv").config();
 
 const Stripe = require("stripe");
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+const ORDERS_FILE = "orders.json";
+const USERS_FILE = "users.json";
+
+function readJsonFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return [];
+    }
+
+    const raw = fs.readFileSync(filePath, "utf8");
+
+    if (!raw.trim()) {
+      return [];
+    }
+
+    return JSON.parse(raw);
+  } catch (error) {
+    console.error(`Error reading ${filePath}:`, error);
+    return [];
+  }
+}
+
+function writeJsonFile(filePath, data) {
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error(`Error writing ${filePath}:`, error);
+    throw error;
+  }
+}
 
 app.get("/", (req, res) => {
   res.send("LeafletPro Backend Running");
@@ -67,27 +98,106 @@ app.post("/api/quote", (req, res) => {
 });
 
 app.post("/order", (req, res) => {
-  const order = req.body || {};
+  try {
+    const order = req.body || {};
+    const orders = readJsonFile(ORDERS_FILE);
 
-  let orders = [];
-  let saasUsers = [];
-  if (fs.existsSync("orders.json")) {
-    orders = JSON.parse(fs.readFileSync("orders.json"));
+    const newOrder = {
+      id: Date.now(),
+      ...order,
+      createdAt: new Date().toISOString()
+    };
+
+    orders.push(newOrder);
+    writeJsonFile(ORDERS_FILE, orders);
+
+    res.json({ success: true, order: newOrder });
+  } catch (error) {
+    console.error("Order save error:", error);
+    res.status(500).json({ success: false });
   }
-
-  orders.push(order);
-  fs.writeFileSync("orders.json", JSON.stringify(orders, null, 2));
-
-  res.json({ success: true });
 });
 
 app.get("/orders", (req, res) => {
-  if (!fs.existsSync("orders.json")) {
-    return res.json([]);
+  try {
+    const orders = readJsonFile(ORDERS_FILE);
+    res.json(orders);
+  } catch (error) {
+    console.error("Orders fetch error:", error);
+    res.status(500).json([]);
   }
+});
 
-  const orders = JSON.parse(fs.readFileSync("orders.json"));
-  res.json(orders);
+app.post("/signup", (req, res) => {
+  try {
+    const {
+      firstName = "",
+      lastName = "",
+      company = "",
+      email = "",
+      phone = "",
+      businessType = "",
+      password = ""
+    } = req.body || {};
+
+    if (!firstName || !lastName || !company || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields"
+      });
+    }
+
+    const users = readJsonFile(USERS_FILE);
+
+    const existingUser = users.find(
+      (user) => String(user.email).toLowerCase() === String(email).toLowerCase()
+    );
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already exists"
+      });
+    }
+
+    const newUser = {
+      id: Date.now(),
+      firstName,
+      lastName,
+      company,
+      email,
+      phone,
+      businessType,
+      password,
+      plan: "starter",
+      createdAt: new Date().toISOString()
+    };
+
+    users.push(newUser);
+    writeJsonFile(USERS_FILE, users);
+
+    res.json({
+      success: true,
+      message: "Account created",
+      user: newUser
+    });
+  } catch (error) {
+    console.error("Signup error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Signup failed"
+    });
+  }
+});
+
+app.get("/users", (req, res) => {
+  try {
+    const users = readJsonFile(USERS_FILE);
+    res.json(users);
+  } catch (error) {
+    console.error("Users fetch error:", error);
+    res.status(500).json([]);
+  }
 });
 
 app.post("/create-checkout", async (req, res) => {
@@ -117,82 +227,13 @@ app.post("/create-checkout", async (req, res) => {
       cancel_url: "https://leafletpro-website-1.onrender.com/?cancel=true"
     });
 
-    return res.json({ id: session.id });
+    res.json({ id: session.id });
   } catch (error) {
     console.error("Stripe checkout error:", error);
-    return res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
-// SaaS signup
-app.post("/signup", async (req, res) => {
-  try {
 
-    const { firstName, lastName, company, email, phone, businessType, password } = req.body;
-
-    const newUser = {
-      firstName,
-      lastName,
-      company,
-      email,
-      phone,
-      businessType,
-      password,
-      createdAt: new Date()
-    };
-
-    await db.collection("users").insertOne(newUser);
-
-    res.json({
-      success: true
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false });
-  }
-});
-// Get SaaS users
-app.get("/users", async (req, res) => {
-  const users = await db.collection("users").find().toArray();
-  res.json(users);
-});
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
-});
-app.post("/signup", (req, res) => {
-
-  const {
-    firstName,
-    lastName,
-    company,
-    email,
-    phone,
-    businessType,
-    password
-  } = req.body;
-
-  const newUser = {
-    id: Date.now(),
-    firstName,
-    lastName,
-    company,
-    email,
-    phone,
-    businessType,
-    password,
-    plan: "starter",
-    createdAt: new Date()
-  };
-
-  saasUsers.push(newUser);
-
-  res.json({
-    success: true,
-    message: "Account created",
-    user: newUser
-  });
-
-});
-app.get("/users", (req, res) => {
-  res.json(saasUsers);
 });
