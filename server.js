@@ -99,19 +99,34 @@ app.post("/api/quote", (req, res) => {
 
 app.post("/order", (req, res) => {
   try {
-    const order = req.body || {};
+    const data = req.body || {};
     const orders = readJsonFile(ORDERS_FILE);
 
     const newOrder = {
       id: Date.now(),
-      ...order,
+
+      // ✅ FIXED mapping
+      firstName: data.first_name || "",
+      lastName: data.last_name || "",
+      email: data.email || "",
+      phone: data.phone || "",
+      company: data.company || "",
+
+      postcode: data.postcode || "",
+      quantity: data.quantity || "",
+      printedAlready: data.printed_already || "",
+      campaignStartDate: data.campaign_start_date || "",
+      areasRequired: data.areas_required || "",
+      notes: data.message || "",
+
       createdAt: new Date().toISOString()
     };
 
     orders.push(newOrder);
     writeJsonFile(ORDERS_FILE, orders);
 
-    res.json({ success: true, order: newOrder });
+    res.json({ success: true });
+
   } catch (error) {
     console.error("Order save error:", error);
     res.status(500).json({ success: false });
